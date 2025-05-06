@@ -3,22 +3,32 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BankAService.Data;
 
-public class BankADbContext(DbContextOptions<BankADbContext> options) : DbContext(options)
+public class BankADbContext : DbContext
 {
+    public BankADbContext(DbContextOptions<BankADbContext> options) :  base(options)
+    {
+        SeedData();
+    }
+    
     public DbSet<BankAccount> BankAccounts { get; set; }
 
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    private void SeedData()
     {
-        modelBuilder.Entity<BankAccount>().HasData(
-            new BankAccount
+        if (!BankAccounts.Any())
+        {
+            BankAccounts.Add(new BankAccount
             {
                 Id = 1,
                 Balance = 1000
-            }, 
-            new BankAccount
+            });
+
+            BankAccounts.Add(new BankAccount
             {
                 Id = 2,
                 Balance = 500
             });
+        }
+
+        SaveChanges();
     }
 }
