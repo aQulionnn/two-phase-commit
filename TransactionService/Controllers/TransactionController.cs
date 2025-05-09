@@ -5,7 +5,6 @@ using TransactionService.Abstractions;
 using TransactionService.Data;
 using TransactionService.Dtos;
 using TransactionService.Entities;
-using TransactionService.Services;
 
 namespace TransactionService.Controllers;
 
