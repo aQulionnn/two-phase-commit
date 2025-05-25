@@ -1,16 +1,33 @@
 using Microsoft.EntityFrameworkCore;
 using Refit;
+using Steeltoe.Common.Http.Discovery;
+using Steeltoe.Discovery.Client;
+using Steeltoe.Discovery.Consul;
 using TransactionService.Abstractions;
 using TransactionService.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddServiceDiscovery(options => options.UseConsul());
+
+builder.Services.AddHttpClient("BankA", client =>
+{
+    client.BaseAddress = new Uri("http://bank-a-service");
+}).AddServiceDiscovery();
+
+builder.Services.AddHttpClient("BankB", client =>
+{
+    client.BaseAddress = new Uri("http://bank-b-service");
+}).AddServiceDiscovery();
+
 builder.Services.AddScoped<Func<string, IBankApiService>>(provider => key =>
 {
+    var httpClientFactory = provider.GetRequiredService<IHttpClientFactory>();
+    
     return key switch
     {
-        "BankA" => RestService.For<IBankApiService>("https://localhost:7188/api"),
-        "BankB" => RestService.For<IBankApiService>("https://localhost:7094/api"),
+        "BankA" => RestService.For<IBankApiService>(httpClientFactory.CreateClient("BankA")),
+        "BankB" => RestService.For<IBankApiService>(httpClientFactory.CreateClient("BankB")),
         _ => throw new KeyNotFoundException()
     };
 });

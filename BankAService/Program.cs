@@ -1,7 +1,11 @@
 using BankAService.Data;
 using Microsoft.EntityFrameworkCore;
+using Steeltoe.Discovery.Client;
+using Steeltoe.Discovery.Consul;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddServiceDiscovery(options => options.UseConsul());
 
 builder.Services.AddDbContext<BankADbContext>(options => options.UseInMemoryDatabase("Database"));
 
