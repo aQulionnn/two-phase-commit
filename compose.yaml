@@ -1,0 +1,33 @@
+﻿services:
+  transaction-service:
+    container_name: transaction-service
+    image: transactionservice
+    build:
+      context: .
+      dockerfile: TransactionService/Dockerfile
+    ports:
+      - "5000:8080"
+
+  bank-a-service:
+    container_name: bank-a-service
+    image: bankaservice
+    build:
+      context: .
+      dockerfile: BankAService/Dockerfile
+    ports:
+      - "5001:8080"
+
+  bank-b-service:
+    container_name: bank-b-service
+    image: bankbservice
+    build:
+      context: .
+      dockerfile: BankBService/Dockerfile
+    ports:
+      - "5002:8080"
+
+  consul:
+    container_name: consul
+    image: hashicorp/consul:latest
+    ports:
+      - "8500:8500" 

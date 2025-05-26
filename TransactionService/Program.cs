@@ -12,12 +12,12 @@ builder.Services.AddServiceDiscovery(options => options.UseConsul());
 
 builder.Services.AddHttpClient("BankA", client =>
 {
-    client.BaseAddress = new Uri("http://bank-a-service");
+    client.BaseAddress = new Uri("http://bank-a");
 }).AddServiceDiscovery();
 
 builder.Services.AddHttpClient("BankB", client =>
 {
-    client.BaseAddress = new Uri("http://bank-b-service");
+    client.BaseAddress = new Uri("http://bank-b");
 }).AddServiceDiscovery();
 
 builder.Services.AddScoped<Func<string, IBankApiService>>(provider => key =>
@@ -47,10 +47,13 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.MapGet("/", () => Results.Redirect("/swagger/index.html")).ExcludeFromDescription();;
+
 app.UseHttpsRedirection();
 
 app.UseAuthorization();
 
 app.MapControllers();
 
-app.Run();
+app.Run("http://0.0.0.0:8080");
+
