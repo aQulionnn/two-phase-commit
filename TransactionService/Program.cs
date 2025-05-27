@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Http.Resilience;
+using Polly;
 using Refit;
 using Steeltoe.Common.Http.Discovery;
 using Steeltoe.Discovery.Client;
@@ -10,15 +12,55 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddServiceDiscovery(options => options.UseConsul());
 
-builder.Services.AddHttpClient("BankA", client =>
-{
-    client.BaseAddress = new Uri("http://bank-a");
-}).AddServiceDiscovery();
+builder.Services.AddHttpClient("BankA", client => client.BaseAddress = new Uri("http://bank-a"))
+    .AddServiceDiscovery()
+    .AddResilienceHandler("BankAHttpClient", pipeline =>
+    {
+        pipeline.AddTimeout(TimeSpan.FromSeconds(5));
 
-builder.Services.AddHttpClient("BankB", client =>
-{
-    client.BaseAddress = new Uri("http://bank-b");
-}).AddServiceDiscovery();
+        pipeline.AddRetry(new HttpRetryStrategyOptions
+        {
+            MaxRetryAttempts = 3,
+            BackoffType = DelayBackoffType.Exponential,
+            UseJitter = true,
+            Delay = TimeSpan.FromSeconds(1)
+        });
+
+        pipeline.AddCircuitBreaker(new HttpCircuitBreakerStrategyOptions
+        {
+            SamplingDuration = TimeSpan.FromSeconds(10),
+            FailureRatio = 0.75,
+            MinimumThroughput = 5,
+            BreakDuration = TimeSpan.FromSeconds(5)
+        });
+
+        pipeline.AddTimeout(TimeSpan.FromSeconds(1));
+    });
+
+builder.Services.AddHttpClient("BankB", client => client.BaseAddress = new Uri("http://bank-b"))
+    .AddServiceDiscovery()
+    .AddResilienceHandler("BankBHttpClient", pipeline =>
+    {
+        pipeline.AddTimeout(TimeSpan.FromSeconds(5));
+
+        pipeline.AddRetry(new HttpRetryStrategyOptions
+        {
+            MaxRetryAttempts = 3,
+            BackoffType = DelayBackoffType.Exponential,
+            UseJitter = true,
+            Delay = TimeSpan.FromSeconds(1)
+        });
+
+        pipeline.AddCircuitBreaker(new HttpCircuitBreakerStrategyOptions
+        {
+            SamplingDuration = TimeSpan.FromSeconds(10),
+            FailureRatio = 0.75,
+            MinimumThroughput = 5,
+            BreakDuration = TimeSpan.FromSeconds(5)
+        });
+
+        pipeline.AddTimeout(TimeSpan.FromSeconds(1));
+    });
 
 builder.Services.AddScoped<Func<string, IBankApiService>>(provider => key =>
 {
