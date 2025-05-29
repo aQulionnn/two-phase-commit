@@ -7,13 +7,17 @@ using Steeltoe.Discovery.Client;
 using Steeltoe.Discovery.Consul;
 using TransactionService.Abstractions;
 using TransactionService.Data;
+using TransactionService.DelegatingHandlers;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddTransient<LoggingHandler>();
 
 builder.Services.AddServiceDiscovery(options => options.UseConsul());
 
 builder.Services.AddHttpClient("BankA", client => client.BaseAddress = new Uri("http://bank-a"))
     .AddServiceDiscovery()
+    .AddHttpMessageHandler<LoggingHandler>()
     .AddResilienceHandler("BankAHttpClient", pipeline =>
     {
         pipeline.AddTimeout(TimeSpan.FromSeconds(5));
@@ -39,6 +43,7 @@ builder.Services.AddHttpClient("BankA", client => client.BaseAddress = new Uri("
 
 builder.Services.AddHttpClient("BankB", client => client.BaseAddress = new Uri("http://bank-b"))
     .AddServiceDiscovery()
+    .AddHttpMessageHandler<LoggingHandler>()
     .AddResilienceHandler("BankBHttpClient", pipeline =>
     {
         pipeline.AddTimeout(TimeSpan.FromSeconds(5));
