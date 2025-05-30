@@ -6,18 +6,24 @@ using Steeltoe.Common.Http.Discovery;
 using Steeltoe.Discovery.Client;
 using Steeltoe.Discovery.Consul;
 using TransactionService.Abstractions;
+using TransactionService.Configurations;
 using TransactionService.Data;
 using TransactionService.DelegatingHandlers;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddOptions<BankApiSettings>()
+    .BindConfiguration(BankApiSettings.SectionName);
+
 builder.Services.AddTransient<LoggingHandler>();
+builder.Services.AddTransient<BankApiAuthHandler>();
 
 builder.Services.AddServiceDiscovery(options => options.UseConsul());
 
 builder.Services.AddHttpClient("BankA", client => client.BaseAddress = new Uri("http://bank-a"))
     .AddServiceDiscovery()
     .AddHttpMessageHandler<LoggingHandler>()
+    .AddHttpMessageHandler<BankApiAuthHandler>()
     .AddResilienceHandler("BankAHttpClient", pipeline =>
     {
         pipeline.AddTimeout(TimeSpan.FromSeconds(5));
@@ -44,6 +50,7 @@ builder.Services.AddHttpClient("BankA", client => client.BaseAddress = new Uri("
 builder.Services.AddHttpClient("BankB", client => client.BaseAddress = new Uri("http://bank-b"))
     .AddServiceDiscovery()
     .AddHttpMessageHandler<LoggingHandler>()
+    .AddHttpMessageHandler<BankApiAuthHandler>()
     .AddResilienceHandler("BankBHttpClient", pipeline =>
     {
         pipeline.AddTimeout(TimeSpan.FromSeconds(5));
