@@ -20,6 +20,22 @@ builder.Services.AddTransient<BankApiAuthHandler>();
 
 builder.Services.AddServiceDiscovery(options => options.UseConsul());
 
+HttpRetryStrategyOptions GetSharedRetryOptions() => new()
+{
+    MaxRetryAttempts = 3,
+    BackoffType = DelayBackoffType.Exponential,
+    UseJitter = true,
+    Delay = TimeSpan.FromSeconds(1)
+};
+
+HttpCircuitBreakerStrategyOptions GetSharedCircuitBreakerOptions() => new()
+{
+    SamplingDuration = TimeSpan.FromSeconds(10),
+    FailureRatio = 0.75,
+    MinimumThroughput = 5,
+    BreakDuration = TimeSpan.FromSeconds(5)
+};
+
 builder.Services.AddHttpClient("BankA", client => client.BaseAddress = new Uri("http://bank-a"))
     .AddServiceDiscovery()
     .AddHttpMessageHandler<LoggingHandler>()
@@ -28,21 +44,9 @@ builder.Services.AddHttpClient("BankA", client => client.BaseAddress = new Uri("
     {
         pipeline.AddTimeout(TimeSpan.FromSeconds(5));
 
-        pipeline.AddRetry(new HttpRetryStrategyOptions
-        {
-            MaxRetryAttempts = 3,
-            BackoffType = DelayBackoffType.Exponential,
-            UseJitter = true,
-            Delay = TimeSpan.FromSeconds(1)
-        });
+        pipeline.AddRetry(GetSharedRetryOptions());
 
-        pipeline.AddCircuitBreaker(new HttpCircuitBreakerStrategyOptions
-        {
-            SamplingDuration = TimeSpan.FromSeconds(10),
-            FailureRatio = 0.75,
-            MinimumThroughput = 5,
-            BreakDuration = TimeSpan.FromSeconds(5)
-        });
+        pipeline.AddCircuitBreaker(GetSharedCircuitBreakerOptions());
 
         pipeline.AddTimeout(TimeSpan.FromSeconds(1));
     });
@@ -55,21 +59,9 @@ builder.Services.AddHttpClient("BankB", client => client.BaseAddress = new Uri("
     {
         pipeline.AddTimeout(TimeSpan.FromSeconds(5));
 
-        pipeline.AddRetry(new HttpRetryStrategyOptions
-        {
-            MaxRetryAttempts = 3,
-            BackoffType = DelayBackoffType.Exponential,
-            UseJitter = true,
-            Delay = TimeSpan.FromSeconds(1)
-        });
+        pipeline.AddRetry(GetSharedRetryOptions());
 
-        pipeline.AddCircuitBreaker(new HttpCircuitBreakerStrategyOptions
-        {
-            SamplingDuration = TimeSpan.FromSeconds(10),
-            FailureRatio = 0.75,
-            MinimumThroughput = 5,
-            BreakDuration = TimeSpan.FromSeconds(5)
-        });
+        pipeline.AddCircuitBreaker(GetSharedCircuitBreakerOptions());
 
         pipeline.AddTimeout(TimeSpan.FromSeconds(1));
     });
@@ -101,7 +93,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.MapGet("/", () => Results.Redirect("/swagger/index.html")).ExcludeFromDescription();;
+app.MapGet("/", () => Results.Redirect("/swagger/index.html")).ExcludeFromDescription();
 
 app.UseHttpsRedirection();
 
