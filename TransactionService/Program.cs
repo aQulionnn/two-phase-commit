@@ -5,12 +5,27 @@ using Refit;
 using Steeltoe.Common.Http.Discovery;
 using Steeltoe.Discovery.Client;
 using Steeltoe.Discovery.Consul;
+using TickerQ.Dashboard.DependencyInjection;
+using TickerQ.DependencyInjection;
+using TickerQ.EntityFrameworkCore.DependencyInjection;
 using TransactionService.Abstractions;
 using TransactionService.Configurations;
 using TransactionService.Data;
 using TransactionService.DelegatingHandlers;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddTickerQ(options =>
+{
+    options.AddOperationalStore<TransactionDbContext>(efOptions =>
+    {
+        efOptions.UseModelCustomizerForMigrations();
+        efOptions.CancelMissedTickersOnApplicationRestart();
+    });
+
+    options.AddDashboard("/tickerq");
+    options.AddDashboardBasicAuth();
+});
 
 builder.Services.AddOptions<BankApiSettings>()
     .BindConfiguration(BankApiSettings.SectionName);

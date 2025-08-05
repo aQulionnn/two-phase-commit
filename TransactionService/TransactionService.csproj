@@ -16,6 +16,9 @@
         <PackageReference Include="Steeltoe.Discovery.ClientCore" Version="3.2.8" />
         <PackageReference Include="Steeltoe.Discovery.Consul" Version="3.2.8" />
         <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2"/>
+        <PackageReference Include="TickerQ" Version="2.4.2" />
+        <PackageReference Include="TickerQ.Dashboard" Version="2.4.2" />
+        <PackageReference Include="TickerQ.EntityFrameworkCore" Version="2.4.2" />
     </ItemGroup>
 
     <ItemGroup>
