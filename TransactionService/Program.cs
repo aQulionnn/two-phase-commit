@@ -12,11 +12,13 @@ using TransactionService.Abstractions;
 using TransactionService.Configurations;
 using TransactionService.Data;
 using TransactionService.DelegatingHandlers;
+using TransactionService.Handlers;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddTickerQ(options =>
 {
+    options.SetExceptionHandler<BackgroundJobExceptionHandler>();
     options.AddOperationalStore<TransactionDbContext>(efOptions =>
     {
         efOptions.UseModelCustomizerForMigrations();
