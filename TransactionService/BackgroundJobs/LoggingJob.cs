@@ -1,4 +1,5 @@
 using TickerQ.Utilities.Base;
+using TickerQ.Utilities.Enums;
 using TickerQ.Utilities.Models;
 using TransactionService.Entities;
 
@@ -12,5 +13,11 @@ public class LoggingJob(ILogger<LoggingJob> logger)
     public void Execute(TickerFunctionContext<List<Transaction>> tickerContext)
     {
         _logger.LogInformation("Retrieved Transactions: {List<Transaction>}", tickerContext.Request);
+    }
+
+    [TickerFunction("BackgroundJobsHealthCheckJob", "%CronTicker:EveryMinute%", TickerTaskPriority.Low)]
+    public void ExecuteBackgroundJobsHealthCheck()
+    {
+        _logger.LogInformation("Background jobs are stabl");
     }
 }
