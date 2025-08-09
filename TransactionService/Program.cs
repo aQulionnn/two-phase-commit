@@ -1,3 +1,7 @@
+using System.Security.Claims;
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Http.Resilience;
 using Polly;
@@ -15,6 +19,58 @@ using TransactionService.DelegatingHandlers;
 using TransactionService.Handlers;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddAuthorization();
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer();
+
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    options.OnRejected = async (context, token) =>
+    {
+        if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out TimeSpan retryAfter))
+        {
+            context.HttpContext.Response.Headers.RetryAfter = $"{retryAfter.TotalSeconds}";
+
+            var problemDetailsFactory = context.HttpContext.RequestServices.GetRequiredService<ProblemDetailsFactory>();
+            var problemDetails = problemDetailsFactory.CreateProblemDetails(
+                context.HttpContext,
+                StatusCodes.Status429TooManyRequests,
+                "Too Many Requests",
+                $"Too many requests. Try again after {retryAfter.TotalSeconds} seconds");
+
+            await context.HttpContext.Response.WriteAsJsonAsync(problemDetails, token);
+        }
+    };
+
+    options.AddPolicy("", httpContext =>
+    {
+        string? userId = httpContext.User.FindFirstValue("userId");
+
+        if (!string.IsNullOrEmpty(userId))
+        {
+            return RateLimitPartition.GetTokenBucketLimiter(
+                userId,
+                _ => new TokenBucketRateLimiterOptions
+                {
+                    TokenLimit = 5,
+                    TokensPerPeriod = 2,
+                    ReplenishmentPeriod = TimeSpan.FromMinutes(1),
+                });
+        }
+
+        return RateLimitPartition.GetFixedWindowLimiter(
+            "anonymous",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 5,
+                Window = TimeSpan.FromMinutes(1)
+            });
+    });
+});
 
 builder.Services.AddTickerQ(options =>
 {
@@ -115,6 +171,7 @@ app.MapGet("/", () => Results.Redirect("/swagger/index.html")).ExcludeFromDescri
 app.UseHttpsRedirection();
 
 app.UseAuthorization();
+app.UseAuthentication();
 
 app.MapControllers();
 
